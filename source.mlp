@@ -1,0 +1,13 @@
+int main (){
+    double radius;
+    cin >> radius;
+    double perim;
+    double area;
+    double pi;
+    pi = 3.14;
+    perim = 2*pi*radius;
+    area = pi*radius*radius;
+    cout<<perim;
+    cout << area;
+    return 0; 
+} 

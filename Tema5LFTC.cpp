@@ -7,8 +7,6 @@
 
 using namespace std;
 
-
-
 int main(int argc, char const* argv[]);
 
 void find_first(vector< pair<char, string> > gram,
@@ -22,7 +20,7 @@ void find_follow(vector< pair<char, string> > gram,
 
 void display_grammar(vector< pair<char, string> > gram) {
 	cout << "Grammar parsed from grammar file: \n";
-	int count = 1;
+	int count = 0;
 	for (auto it : gram) {
 		cout << count++ << ".  " << it.first << " -> " << it.second << "\n";
 	}
@@ -101,6 +99,7 @@ int main(int argc, char const *argv[])
 	// Parsing the grammar file
 	fstream grammar_file;
 	grammar_file.open(argv[1], ios::in);
+	// check if grammar file opens correctly
 	if(grammar_file.fail()) {
 		cout<<"Error in opening grammar file\n";
 		return 2;
@@ -112,14 +111,16 @@ int main(int argc, char const *argv[])
 		char buffer[20];
 		grammar_file.getline(buffer, 19);
 
+		// a production rule will have one non terminal on the left side
+		// lhs is the non terminal
 		char lhs = buffer[0];
+		// rhs is the terminal
 		string rhs = buffer+3;
 		pair <char, string> prod (lhs, rhs);
 		gram.push_back(prod);
 	}
 
 	display_grammar(gram);
-
 
 	// Gather all non terminals
 	set<char> non_terms;
@@ -132,7 +133,9 @@ int main(int argc, char const *argv[])
 	// Gather all terminals
 	set<char> terms;
 	for(auto i = gram.begin(); i != gram.end(); ++i) {
+		// get each char from rhs of production rule
 		for(auto ch = i->second.begin(); ch != i->second.end(); ++ch) {
+			// if not non-terminal
 			if(!isupper(*ch)) {
 				terms.insert(*ch);
 			}
@@ -147,7 +150,7 @@ int main(int argc, char const *argv[])
 	// Start symbol is first non terminal production in grammar
 	char start_sym = gram.begin()->first;
 
-
+	// Compute first for each non terminal
 	map< char, set<char> > firsts;
 	for(auto non_term = non_terms.begin(); non_term != non_terms.end(); ++non_term) {
 		if(firsts[*non_term].empty()){
@@ -156,7 +159,6 @@ int main(int argc, char const *argv[])
 	}
 
 	display_firsts(firsts);
-
 
 	map< char, set<char> > follows;
 	// Find follow of start variable first
@@ -175,7 +177,7 @@ int main(int argc, char const *argv[])
 	int parse_table_rows = non_terms.size();
 	int parse_table_cols = terms.size();
 
-	//allocate the array
+	//allocate the parse table array
 	int** parse_table = new int* [parse_table_rows];
 	for (int i = 0; i < parse_table_rows; i++) {
 		parse_table[i] = new int[parse_table_cols];
@@ -187,9 +189,13 @@ int main(int argc, char const *argv[])
 
 		set<char> next_list;
 		bool finished = false;
+		// Iterate over rhs literals
 		for(auto ch = rhs.begin(); ch != rhs.end(); ++ch) {
+			// If ch is non terminal
 			if(!isupper(*ch)) {
+				// If ch is not epsilon
 				if(*ch != 'e') {
+					// Add it to the next list
 					next_list.insert(*ch);
 					finished = true;
 					break;
@@ -198,6 +204,7 @@ int main(int argc, char const *argv[])
 			}
 
 			set<char> firsts_copy(firsts[*ch].begin(), firsts[*ch].end());
+			// If there is not an epsilon in the firsts for ch
 			if(firsts_copy.find('e') == firsts_copy.end()) {
 				next_list.insert(firsts_copy.begin(), firsts_copy.end());
 				finished = true;
@@ -212,11 +219,12 @@ int main(int argc, char const *argv[])
 			next_list.insert(follows[prod->first].begin(), follows[prod->first].end());
 		}
 
-
+		// Iterate over next list and add productions to the parse table
 		for(auto ch = next_list.begin(); ch != next_list.end(); ++ch) {
 			int row = distance(non_terms.begin(), non_terms.find(prod->first));
 			int col = distance(terms.begin(), terms.find(*ch));
 			int prod_num = distance(gram.begin(), prod);
+			// If there is aleady a production on the [row][col] position, we have a collision
 			if(parse_table[row][col] != -1) {
 				cout<<"Collision at ["<<row<<"]["<<col<<"] for production "<<prod_num<<"\n";
 				continue;
@@ -228,6 +236,7 @@ int main(int argc, char const *argv[])
 	
 	display_parsing_table(terms, non_terms, parse_table);
 
+	// Get input sequence
 	string input_string(argv[2]);
 	input_string.push_back('$');
 	stack<char> st;
@@ -236,31 +245,38 @@ int main(int argc, char const *argv[])
 
 	// Check if input string is valid
 	for(auto ch = input_string.begin(); ch != input_string.end(); ++ch) {
+		// If there are literals not present in terms, the input string in invalid
 		if(terms.find(*ch) == terms.end()) {
 			cout<<"Input string is invalid\n";
 			return 2;
 		}
 	}
 
-	// cout<<"Processing input string\n";
+	cout<<"Processing input string\n";
+
+	vector<int> productions;
+
 	bool accepted = true;
 	while(!st.empty() && !input_string.empty()) {
-		// If stack top same as input string char remove it
-
+		// If stack top is the same as input string char, remove it
 		if(input_string[0] == st.top()) {
 			st.pop();
 			input_string.erase(0, 1);
 		}
+		// If stack top is non terminal
 		else if(!isupper(st.top())) {
 			cout<<"Unmatched terminal found\n";
 			accepted = false;
 			break;
 		}
+		// Stack top is terminal
 		else {
 			char stack_top = st.top();
 			int row = distance(non_terms.begin(), non_terms.find(stack_top));
 			int col = distance(terms.begin(), terms.find(input_string[0]));
 			int prod_num = parse_table[row][col];
+
+			productions.push_back(prod_num);
 
 			if(prod_num == -1) {
 				cout<<"No production found in parse table\n";
@@ -281,12 +297,16 @@ int main(int argc, char const *argv[])
 
 	if(accepted) {
 		cout<<"Input string is accepted\n";
+		cout << "The productions applied are:\n";
+		for (auto prod : productions)
+			cout << prod << "-> ";
+		cout << "end";
 	}
 	else {
 		cout<<"Input string is rejected\n";
 	}
 
-	//deallocate the array
+	//deallocate the parse table array
 	for (int i = 0; i < parse_table_rows; i++)
 		delete[] parse_table[i];
 	delete[] parse_table;

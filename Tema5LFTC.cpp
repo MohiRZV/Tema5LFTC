@@ -19,7 +19,7 @@ void find_follow(vector< pair<char, string> > gram,
 	char non_term); 
 
 void display_grammar(vector< pair<char, string> > gram) {
-	cout << "Grammar parsed from grammar file: \n";
+	cout << "Grammar: \n";
 	int count = 0;
 	for (auto it : gram) {
 		cout << count++ << ".  " << it.first << " -> " << it.second << "\n";
@@ -28,7 +28,7 @@ void display_grammar(vector< pair<char, string> > gram) {
 }
 
 void display_non_terminals(set<char> non_terms) {
-	cout << "The non terminals in the grammar are: ";
+	cout << "Non terminals: ";
 	for (auto i = non_terms.begin(); i != non_terms.end(); ++i) {
 		cout << *i << " ";
 	}
@@ -36,7 +36,7 @@ void display_non_terminals(set<char> non_terms) {
 }
 
 void display_terminals(set<char> terms) {
-	cout << "The terminals in the grammar are: ";
+	cout << "Terminals: ";
 	for (auto i = terms.begin(); i != terms.end(); ++i) {
 		cout << *i << " ";
 	}
@@ -44,7 +44,7 @@ void display_terminals(set<char> terms) {
 }
 
 void display_firsts(map< char, set<char> > firsts) {
-	cout << "Firsts list: \n";
+	cout << "Firsts: \n";
 	for (auto it = firsts.begin(); it != firsts.end(); ++it) {
 		cout << it->first << " : ";
 		for (auto firsts_it = it->second.begin(); firsts_it != it->second.end(); ++firsts_it) {
@@ -56,7 +56,7 @@ void display_firsts(map< char, set<char> > firsts) {
 }
 
 void display_follows(map< char, set<char> > follows) {
-	cout << "Follows list: \n";
+	cout << "Follows: \n";
 	for (auto it = follows.begin(); it != follows.end(); ++it) {
 		cout << it->first << " : ";
 		for (auto follows_it = it->second.begin(); follows_it != it->second.end(); ++follows_it) {
@@ -237,7 +237,9 @@ int main(int argc, char const *argv[])
 	display_parsing_table(terms, non_terms, parse_table);
 
 	// Get input sequence
-	string input_string(argv[2]);
+	string input_string;// (argv[2]);
+	cout << "\n\nEnter a squence:\n";
+	cin >> input_string;
 	input_string.push_back('$');
 	stack<char> st;
 	st.push('$');
@@ -252,16 +254,29 @@ int main(int argc, char const *argv[])
 		}
 	}
 
-	cout<<"Processing input string\n";
-
 	vector<int> productions;
 
 	bool accepted = true;
 	while(!st.empty() && !input_string.empty()) {
+		//display rule
+		stack<char> st_copy;
+		string stack = "";
+		while (!st.empty()) {
+			stack.append(string(1,st.top()));
+			st_copy.push(st.top());
+			st.pop();
+		}
+		while (!st_copy.empty()) {
+			st.push(st_copy.top());
+			st_copy.pop();
+		}
+		cout << "stack: " << stack << " input: " << input_string << "\n";
+
 		// If stack top is the same as input string char, remove it
 		if(input_string[0] == st.top()) {
 			st.pop();
 			input_string.erase(0, 1);
+			cout << "pop\n";
 		}
 		// If stack top is non terminal
 		else if(!isupper(st.top())) {
@@ -269,12 +284,13 @@ int main(int argc, char const *argv[])
 			accepted = false;
 			break;
 		}
-		// Stack top is terminal
 		else {
 			char stack_top = st.top();
 			int row = distance(non_terms.begin(), non_terms.find(stack_top));
 			int col = distance(terms.begin(), terms.find(input_string[0]));
 			int prod_num = parse_table[row][col];
+
+			cout << "push " << prod_num << '\n';
 
 			productions.push_back(prod_num);
 
@@ -299,7 +315,7 @@ int main(int argc, char const *argv[])
 		cout<<"Input string is accepted\n";
 		cout << "The productions applied are:\n";
 		for (auto prod : productions)
-			cout << prod << "-> ";
+			cout << prod << " -> ";
 		cout << "end";
 	}
 	else {
@@ -318,31 +334,27 @@ void find_first(vector< pair<char, string> > gram,
 	map< char, set<char> > &firsts, 
 	char non_term) {
 
-	// cout<<"Finding firsts of "<<non_term<<"\n";
-
 	for(auto it = gram.begin(); it != gram.end(); ++it) {
 		// Find productions of the non terminal
 		if(it->first != non_term) {
 			continue;
 		}
 
-		// cout<<"Processing production "<<it->first<<"->"<<it->second<<"\n";
-
 		string rhs = it->second;
 		// Loop till a non terminal or no epsilon variable found
 		for(auto ch = rhs.begin(); ch != rhs.end(); ++ch) {
-			// If first char in production a non term, add it to firsts list
+			// If the first char in production is a non term, add it to firsts list
 			if(!isupper(*ch)) {
 				firsts[non_term].insert(*ch);
 				break;
 			}
 			else {
-				// If char in prod is non terminal and whose firsts has no yet been found out
+				// If char in prod is non terminal and its firsts have not yet been found
 				// Find first for that non terminal
 				if(firsts[*ch].empty()) {
 					find_first(gram, firsts, *ch);
 				}
-				// If variable doesn't have epsilon, stop loop
+				// If the variable doesn't have epsilon, stop the loop
 				if(firsts[*ch].find('e') == firsts[*ch].end()) {
 					firsts[non_term].insert(firsts[*ch].begin(), firsts[*ch].end());
 					break;
@@ -350,12 +362,12 @@ void find_first(vector< pair<char, string> > gram,
 
 				set<char> firsts_copy(firsts[*ch].begin(), firsts[*ch].end());
 
-				// Remove epsilon from firsts if not the last variable
+				// Remove epsilon from firsts if it's not the last variable
 				if(ch + 1 != rhs.end()) {
 					firsts_copy.erase('e');
 				}
 
-				// Append firsts of that variable
+				// Append firsts of the variable
 				firsts[non_term].insert(firsts_copy.begin(), firsts_copy.end());
 			}
 		}
@@ -367,8 +379,6 @@ void find_follow(vector< pair<char, string> > gram,
 	map< char, set<char> > &follows, 
 	map< char, set<char> > firsts, 
 	char non_term) {
-
-	// cout<<"Finding follow of "<<non_term<<"\n";
 
 	for(auto it = gram.begin(); it != gram.end(); ++it) {
 
@@ -408,7 +418,7 @@ void find_follow(vector< pair<char, string> > gram,
 		}
 
 
-		// If end of production, follow same as follow of variable
+		// If end of production, set follow the same as follow of the variable
 		if(ch == it->second.end() && !finished) {
 			// Find follow if it doesn't have
 			if(follows[it->first].empty()) {
@@ -420,3 +430,8 @@ void find_follow(vector< pair<char, string> > gram,
 	}
 
 }
+
+/* 
+* TODO for next lab
+* input: FIP not a single sequence
+*/

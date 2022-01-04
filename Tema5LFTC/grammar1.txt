@@ -1,0 +1,27 @@
+program: INT=i MAIN=m (=p content=C )=p
+S->impCp
+content: declarareParam=D lista_instr=L final=F
+C->DLF
+lista_instr: instr | instr lista_instr
+L->I
+L->IL
+instr: atribuire | instr_intrare | instr_iesire | instr_if | instr_while
+I->a
+I->n
+I->o
+I->f
+I->w
+declarareParam: declarare | declarare declarareParam
+declarare: tip IDENTIFIER ';'
+tip: INT | DOUBLE
+atribuire: IDENTIFIER ASSIGN expresie ';'
+expresie: term | expresie '+' term | expresie '-' term | expresie '*' term | expresie '/' term | expresie '%' term
+term: CONSTANT | IDENTIFIER
+instr_intrare: CIN GT GT IDENTIFIER ';'
+instr_iesire: COUT LT LT IDENTIFIER ';'
+instr_if: IF '(' conditie ')' '{' lista_instr '}' | IF '(' conditie ')' '{' lista_instr '}' ELSE '{' lista_instr '}' | instr_daca
+instr_daca: DACA '(' IDENTIFIER ')' ATUNCI instr SFDACA
+conditie: expresie relatie expresie
+relatie: LE | LT | GE | GT | EQ | NEQ
+instr_while: WHILE '(' conditie ')' '{' lista_instr '}'
+final: RETURN
